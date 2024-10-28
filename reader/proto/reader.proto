@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package reader;
+
+option go_package = "github.com/abhishek-kamat-nutanix/go-client/reader/proto";
+
+message VolumeRequest {
+    string serverAddr = 1;
+    string volumeName = 2;
+    string BackupName = 3;
+}
+
+message VolumeResponse {
+    string message = 1;
+}
+
+service ReaderService {
+    rpc MigrateVolume (VolumeRequest) returns (VolumeResponse);
+}

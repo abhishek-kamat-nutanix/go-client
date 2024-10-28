@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reader-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reader-server
+  template:
+    metadata:
+      labels:
+        app: reader-server
+    spec:
+      containers:
+      - name: go-client
+        image: abhishekkamat27/reader-server:v1  
+        command: ["./server"]
+        ports:
+        - containerPort: 50051
+      imagePullSecrets:
+      - name: my-registry-secret    
+---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: reader-server-service
+# spec:
+#   selector:
+#     app: reader-server
+#   ports:
+#     - protocol: TCP
+#       port: 50051  # The exposed port for external access
+#       targetPort: 50051  # The container's internal port
+#   type: LoadBalancer 
