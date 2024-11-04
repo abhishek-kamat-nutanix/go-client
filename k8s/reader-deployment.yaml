@@ -14,22 +14,22 @@ spec:
     spec:
       containers:
       - name: go-client
-        image: abhishekkamat27/reader-server:v1  
+        image: abhishekkamat27/reader-server-ocp:v1  
         command: ["./server"]
         ports:
         - containerPort: 50051
       imagePullSecrets:
       - name: my-registry-secret    
 ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: reader-server-service
-# spec:
-#   selector:
-#     app: reader-server
-#   ports:
-#     - protocol: TCP
-#       port: 50051  # The exposed port for external access
-#       targetPort: 50051  # The container's internal port
-#   type: LoadBalancer 
+apiVersion: v1
+kind: Service
+metadata:
+  name: reader-server-service
+spec:
+  selector:
+    app: reader-server
+  ports:
+    - protocol: TCP
+      port: 50051  # The exposed port for external access
+      targetPort: 50051  # The container's internal port
+  type: ClusterIP 

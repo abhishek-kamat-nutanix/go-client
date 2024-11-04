@@ -77,7 +77,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 
 
 	// take a snapshot of source pvc
-	snapClass := "default-snapshotclass"
+	snapClass := "lvms-vg1"
 	snap:= v2.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Name: "source-snap"},
@@ -92,7 +92,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	fmt.Printf("ss created %s \n",ss.UID)
 
 	// create pvc for diskreader
-	storageClassName:=  "default-storageclass"
+	storageClassName:=  "lvms-vg1"
 	volumeMode := v1.PersistentVolumeBlock 
 	persistentVolumeAccessMode := v1.ReadWriteOnce
 	resourceName:= v1.ResourceStorage
