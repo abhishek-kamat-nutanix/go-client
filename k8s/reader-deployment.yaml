@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: go-client
-        image: abhishekkamat27/reader-server-ocp:v1  
+        image: abhishekkamat27/reader-server:v2  
         command: ["./server"]
         ports:
         - containerPort: 50051

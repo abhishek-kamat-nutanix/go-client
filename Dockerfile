@@ -16,3 +16,4 @@ RUN go build -o server ./reader/server
 # Run the server
 CMD ["./server"]
 
+ 

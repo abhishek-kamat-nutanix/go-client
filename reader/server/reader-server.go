@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	types "k8s.io/apimachinery/pkg/types"
 	pb "github.com/abhishek-kamat-nutanix/go-client/reader/proto"
 
 	v2 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
@@ -77,7 +78,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 
 
 	// take a snapshot of source pvc
-	snapClass := "lvms-vg1"
+	snapClass := "nutanix-snapshot-class"
 	snap:= v2.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Name: "source-snap"},
@@ -91,8 +92,34 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	}
 	fmt.Printf("ss created %s \n",ss.UID)
 
+
+	// Wait until snapshot is ready to use
+for {
+	ss, err = clientset2.SnapshotV1().VolumeSnapshots("default").Get(context.Background(), "source-snap", metav1.GetOptions{})
+	if err != nil {
+		fmt.Printf("Error while getting snapshot status: %v\n", err)
+	}
+	if ss.Status != nil && ss.Status.ReadyToUse != nil && *ss.Status.ReadyToUse {
+		fmt.Println("Snapshot is ready to use.")
+		break
+	}
+	fmt.Println("Waiting for snapshot to become ready...")
+	time.Sleep(5 * time.Second)
+}
+
+
+	PatchType := types.MergePatchType
+	data := []byte(`{"metadata": {"annotations": {"snapshot.storage.kubernetes.io/allow-volume-mode-change": "true"}}}`)
+
+	snapcontent, err := clientset2.SnapshotV1().VolumeSnapshotContents().Patch(context.Background(), *ss.Status.BoundVolumeSnapshotContentName, PatchType, data, metav1.PatchOptions{})
+	if err != nil {
+		fmt.Printf("Error while patching VolumeSnapshotContent: %v\n", err)
+	}
+	fmt.Printf("VolumeSnapshotContent patched successfully: %s\n", snapcontent.UID)
+
+
 	// create pvc for diskreader
-	storageClassName:=  "lvms-vg1"
+	storageClassName:=  "nutanix-volume"
 	volumeMode := v1.PersistentVolumeBlock 
 	persistentVolumeAccessMode := v1.ReadWriteOnce
 	resourceName:= v1.ResourceStorage

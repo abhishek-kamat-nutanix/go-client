@@ -9,7 +9,7 @@ import (
 	   
 )
 
-var addr string = "reader-server-route-default.apps.ak-ocp.example.com:80"
+var addr string = "10.46.63.221:30051"
 
 func main() {
 
