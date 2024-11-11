@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: reader-deployment
+  namespace: wordpress
 spec:
   replicas: 1
   selector:
@@ -14,7 +15,7 @@ spec:
     spec:
       containers:
       - name: go-client
-        image: abhishekkamat27/reader-server:v2  
+        image: abhishekkamat27/reader-server:ns_class
         command: ["./server"]
         ports:
         - containerPort: 50051
@@ -25,6 +26,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: reader-server-service
+  namespace: wordpress
 spec:
   selector:
     app: reader-server
@@ -32,4 +34,5 @@ spec:
     - protocol: TCP
       port: 50051  # The exposed port for external access
       targetPort: 50051  # The container's internal port
-  type: ClusterIP 
+      nodePort: 30051
+  type: NodePort 

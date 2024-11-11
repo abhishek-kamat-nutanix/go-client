@@ -1,0 +1,14 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: snapshot-patch-role
+rules:
+  - verbs:
+      - get
+      - list
+      - watch
+      - patch
+    apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshotcontents
