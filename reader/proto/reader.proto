@@ -8,6 +8,9 @@ message VolumeRequest {
     string serverAddr = 1;
     string volumeName = 2;
     string BackupName = 3;
+    string namespace = 4;
+    string snapclass = 5;
+    string storageclassname = 6;
 }
 
 message VolumeResponse {

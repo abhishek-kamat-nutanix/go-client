@@ -46,8 +46,9 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	// }
 
 	//config, err := clientcmd.BuildConfigFromFlags("",*kubeconfig)
-	
-	
+	namespace := in.Namespace
+	snapClass := in.Snapclass
+	storageClassName:= in.Storageclassname
 	//fmt.Printf("error building config from flags: %s\n",err.Error())
 	config, err := rest.InClusterConfig()
 	if err!= nil {
@@ -62,9 +63,8 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	}
 
 	// get source snapshot details
-	pvc, err := clientset.CoreV1().PersistentVolumeClaims("default").Get(context.Background(),backupVolume,metav1.GetOptions{})
-	if err != nil{
-		fmt.Printf("error while getting pvc %v from default namespace: %v\n", backupVolume,err)
+	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(),backupVolume,metav1.GetOptions{})
+	if err != nil{		fmt.Printf("error while getting pvc %v from %v namespace: %v\n", backupVolume,namespace,err)
 	}
 
 	size := pvc.Spec.Resources.Requests.Storage()
@@ -78,7 +78,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 
 
 	// take a snapshot of source pvc
-	snapClass := "nutanix-snapshot-class"
+	// snapClass := "default-snapshotclass"
 	snap:= v2.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Name: "source-snap"},
@@ -86,16 +86,16 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 		Status: &v2.VolumeSnapshotStatus{},
 	}
 
-	ss, err := clientset2.SnapshotV1().VolumeSnapshots("default").Create(context.Background(),&snap,metav1.CreateOptions{})
+	ss, err := clientset2.SnapshotV1().VolumeSnapshots(namespace).Create(context.Background(),&snap,metav1.CreateOptions{})
 	if err != nil{
-		fmt.Printf("error while listing pvc from default namespace: %v\n", err)
+		fmt.Printf("error while creating snapshot in %v namespace: %v\n",namespace ,err)
 	}
 	fmt.Printf("ss created %s \n",ss.UID)
 
 
 	// Wait until snapshot is ready to use
 for {
-	ss, err = clientset2.SnapshotV1().VolumeSnapshots("default").Get(context.Background(), "source-snap", metav1.GetOptions{})
+	ss, err = clientset2.SnapshotV1().VolumeSnapshots(namespace).Get(context.Background(), "source-snap", metav1.GetOptions{})
 	if err != nil {
 		fmt.Printf("Error while getting snapshot status: %v\n", err)
 	}
@@ -119,7 +119,7 @@ for {
 
 
 	// create pvc for diskreader
-	storageClassName:=  "nutanix-volume"
+	// storageClassName:=  "default-storageclass"	
 	volumeMode := v1.PersistentVolumeBlock 
 	persistentVolumeAccessMode := v1.ReadWriteOnce
 	resourceName:= v1.ResourceStorage
@@ -136,9 +136,9 @@ for {
 										Status: v1.PersistentVolumeClaimStatus{}}
 										
 	
-	create_pvc, err := clientset.CoreV1().PersistentVolumeClaims("default").Create(context.Background(),&pvclaim,metav1.CreateOptions{})
+	create_pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(),&pvclaim,metav1.CreateOptions{})
 	if err != nil{
-		fmt.Printf("error while creating diskreader pvc in default namespace: %v\n",err)
+		fmt.Printf("error while creating diskreader pvc in %v namespace: %v\n",namespace,err)
 	}
 	fmt.Printf("pvc created %s\n",create_pvc.UID)
 	
@@ -155,32 +155,32 @@ for {
 								Template: v1.PodTemplateSpec{ObjectMeta:  metav1.ObjectMeta{Labels: labels}, 
 								Spec: v1.PodSpec{RestartPolicy: "OnFailure",ImagePullSecrets: []v1.LocalObjectReference{{Name: "my-registry-secret"}}, 
 								Volumes: []v1.Volume{{Name: "diskreader-pvc",VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "diskreader-pvc"}}}},
-								Containers: []v1.Container{{Name: "reader", Image: "abhishekkamat27/grpc_reader:volume",Command: command, Env: []v1.EnvVar{{Name: "GRPC_SERVER_ADDR", Value: address},{Name: "VOLUME_NAME", Value: volumeName}}, SecurityContext: &v1.SecurityContext{Privileged: &priv}, VolumeDevices: []v1.VolumeDevice{{Name: "diskreader-pvc", DevicePath: "/dev/xvda"}}}},}}},}
-	reader, err := clientset.BatchV1().Jobs("default").Create(context.Background(),&readerjob,metav1.CreateOptions{})
+								Containers: []v1.Container{{Name: "reader", Image: "abhishekkamat27/grpc_reader:volume_ns",Command: command, Env: []v1.EnvVar{{Name: "GRPC_SERVER_ADDR", Value: address},{Name: "VOLUME_NAME", Value: volumeName},{Name: "NAMESPACE", Value: namespace}}, SecurityContext: &v1.SecurityContext{Privileged: &priv}, VolumeDevices: []v1.VolumeDevice{{Name: "diskreader-pvc", DevicePath: "/dev/xvda"}}}},}}},}
+	reader, err := clientset.BatchV1().Jobs(namespace).Create(context.Background(),&readerjob,metav1.CreateOptions{})
 	if err != nil{
-		fmt.Printf("error while creating reader job in default namespace: %v\n",err)
+		fmt.Printf("error while creating reader job in %v namespace: %v\n",namespace,err)
 	}
 	fmt.Printf("disk reader job created; %v\n",reader.UID)
 
 	// delete snapshot once used
 	for create_pvc.Status.Phase!= v1.ClaimBound {
-		create_pvc, err = clientset.CoreV1().PersistentVolumeClaims("default").Get(context.Background(),"diskreader-pvc",metav1.GetOptions{})
+		create_pvc, err = clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(),"diskreader-pvc",metav1.GetOptions{})
 		if err != nil{
-			fmt.Printf("error while getting pvc in default namespace: %v\n",err)
+			fmt.Printf("error while getting pvc in %v namespace: %v\n",namespace,err)
 		}
 	}
     
-	 err = clientset2.SnapshotV1().VolumeSnapshots("default").Delete(context.Background(),"source-snap",metav1.DeleteOptions{})
+	 err = clientset2.SnapshotV1().VolumeSnapshots(namespace).Delete(context.Background(),"source-snap",metav1.DeleteOptions{})
 	 if err != nil{
-	 fmt.Printf("error while listing pvc from default namespace: %v\n", err)
+	 fmt.Printf("error while deleting pvc from %v namespace: %v\n",namespace ,err)
 	 }
 	 fmt.Print("volumesnapshot source-snap deleted\n")
 
 
 	// clearance of objects once disk reader Job is done
-	job, err := clientset.BatchV1().Jobs("default").Get(context.Background(),"reader-job",metav1.GetOptions{})
+	job, err := clientset.BatchV1().Jobs(namespace).Get(context.Background(),"reader-job",metav1.GetOptions{})
 	if err != nil{
-		fmt.Printf("error while getting job in default namespace: %v\n",err)
+		fmt.Printf("error while getting job in %v namespace: %v\n",namespace,err)
 	}
 
 	deletePolicy := metav1.DeletePropagationBackground
@@ -190,16 +190,16 @@ for {
 		for _, condition := range job.Status.Conditions {
 			if condition.Type == batchv1.JobComplete && condition.Status == v1.ConditionTrue {
 				//delete diskreader job so diskreader pvc is not bound and can be deleted successfully
-				err = clientset.BatchV1().Jobs("default").Delete(context.Background(),"reader-job",metav1.DeleteOptions{PropagationPolicy: &deletePolicy})	
+				err = clientset.BatchV1().Jobs(namespace).Delete(context.Background(),"reader-job",metav1.DeleteOptions{PropagationPolicy: &deletePolicy})	
 				if err != nil{
-					fmt.Printf("error while getting job in default namespace: %v\n",err)
+					fmt.Printf("error while getting job in %v namespace: %v\n",namespace,err)
 				}
 				fmt.Print("reader job completed, deleting Job/Pod \n")
 
 				//delete pvc now
-				err := clientset.CoreV1().PersistentVolumeClaims("default").Delete(context.Background(),"diskreader-pvc",metav1.DeleteOptions{})
+				err := clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(),"diskreader-pvc",metav1.DeleteOptions{})
 				if err != nil{
-					fmt.Printf("error while deleting pvc from default namespace: %v\n", err)
+					fmt.Printf("error while deleting pvc from %v namespace: %v\n",namespace ,err)
 				}
 				fmt.Print("diskreader-pvc deleted\n")
 				flag=1
@@ -209,9 +209,9 @@ for {
 		if flag==1 {
 			break
 		}
-		job, err = clientset.BatchV1().Jobs("default").Get(context.Background(),"reader-job",metav1.GetOptions{})	
+		job, err = clientset.BatchV1().Jobs(namespace).Get(context.Background(),"reader-job",metav1.GetOptions{})	
 				if err != nil{
-					fmt.Printf("error while getting pvc in default namespace: %v\n",err)
+					fmt.Printf("error while getting pvc in %v namespace: %v\n",namespace,err)
 				}
 		
 		}
