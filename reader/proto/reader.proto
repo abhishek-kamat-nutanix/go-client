@@ -17,6 +17,19 @@ message VolumeResponse {
     string message = 1;
 }
 
+message ConfigRequest {
+    string namespace = 1;
+    string resources = 2; 
+    string storageclassname = 3;
+    string Labels = 4;
+    string serverAddr = 5;
+}
+
+message ConfigResponse {
+    string message = 1;
+}
+
 service ReaderService {
     rpc MigrateVolume (VolumeRequest) returns (VolumeResponse);
+    rpc MigrateConfig (ConfigRequest) returns (ConfigResponse);
 }

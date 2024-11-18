@@ -9,7 +9,9 @@ import (
 	   
 )
 
-var addr string = "10.46.63.221:30051"
+var addr string = "10.15.170.150:30051"
+// 10.15.170.150 nke
+// 10.46.63.221 ocp
 
 func main() {
 
@@ -23,5 +25,6 @@ func main() {
 
 	c := pb.NewReaderServiceClient(conn)
 
-	doMigrateVolume(c)
+	//doMigrateVolume(c)
+	doMigrateConfig(c)
 }

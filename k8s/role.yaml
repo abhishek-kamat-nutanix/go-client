@@ -4,12 +4,24 @@ metadata:
   name: podpvss
   namespace: wordpress
 rules:
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  verbs:
+  - get
+  - watch
+  - list
+  - delete
+  - update
+  - create
 - apiGroups: [""]
   resources:
   - pods
   - persistentvolumeclaims
   - persistentvolumes
   - secrets
+  - deployments
+  - services
   verbs:
   - get
   - watch
