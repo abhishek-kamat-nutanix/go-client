@@ -29,7 +29,19 @@ message ConfigResponse {
     string message = 1;
 }
 
+message AppRequest {
+    string serverAddr = 1;
+    string namespace = 2;
+    string resources = 3; 
+    string Labels = 4;
+}
+
+message AppResponse {
+    string message = 1;
+}
+
 service ReaderService {
     rpc MigrateVolume (VolumeRequest) returns (VolumeResponse);
     rpc MigrateConfig (ConfigRequest) returns (ConfigResponse);
+    rpc MigrateApp (AppRequest) returns (AppResponse);
 }

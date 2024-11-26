@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ReaderService_MigrateVolume_FullMethodName = "/reader.ReaderService/MigrateVolume"
 	ReaderService_MigrateConfig_FullMethodName = "/reader.ReaderService/MigrateConfig"
+	ReaderService_MigrateApp_FullMethodName    = "/reader.ReaderService/MigrateApp"
 )
 
 // ReaderServiceClient is the client API for ReaderService service.
@@ -29,6 +30,7 @@ const (
 type ReaderServiceClient interface {
 	MigrateVolume(ctx context.Context, in *VolumeRequest, opts ...grpc.CallOption) (*VolumeResponse, error)
 	MigrateConfig(ctx context.Context, in *ConfigRequest, opts ...grpc.CallOption) (*ConfigResponse, error)
+	MigrateApp(ctx context.Context, in *AppRequest, opts ...grpc.CallOption) (*AppResponse, error)
 }
 
 type readerServiceClient struct {
@@ -59,12 +61,23 @@ func (c *readerServiceClient) MigrateConfig(ctx context.Context, in *ConfigReque
 	return out, nil
 }
 
+func (c *readerServiceClient) MigrateApp(ctx context.Context, in *AppRequest, opts ...grpc.CallOption) (*AppResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AppResponse)
+	err := c.cc.Invoke(ctx, ReaderService_MigrateApp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ReaderServiceServer is the server API for ReaderService service.
 // All implementations must embed UnimplementedReaderServiceServer
 // for forward compatibility.
 type ReaderServiceServer interface {
 	MigrateVolume(context.Context, *VolumeRequest) (*VolumeResponse, error)
 	MigrateConfig(context.Context, *ConfigRequest) (*ConfigResponse, error)
+	MigrateApp(context.Context, *AppRequest) (*AppResponse, error)
 	mustEmbedUnimplementedReaderServiceServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedReaderServiceServer) MigrateVolume(context.Context, *VolumeRe
 }
 func (UnimplementedReaderServiceServer) MigrateConfig(context.Context, *ConfigRequest) (*ConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MigrateConfig not implemented")
+}
+func (UnimplementedReaderServiceServer) MigrateApp(context.Context, *AppRequest) (*AppResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MigrateApp not implemented")
 }
 func (UnimplementedReaderServiceServer) mustEmbedUnimplementedReaderServiceServer() {}
 func (UnimplementedReaderServiceServer) testEmbeddedByValue()                       {}
@@ -138,6 +154,24 @@ func _ReaderService_MigrateConfig_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ReaderService_MigrateApp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReaderServiceServer).MigrateApp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ReaderService_MigrateApp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReaderServiceServer).MigrateApp(ctx, req.(*AppRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ReaderService_ServiceDesc is the grpc.ServiceDesc for ReaderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var ReaderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MigrateConfig",
 			Handler:    _ReaderService_MigrateConfig_Handler,
+		},
+		{
+			MethodName: "MigrateApp",
+			Handler:    _ReaderService_MigrateApp_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -12,14 +12,13 @@ func doMigrateConfig(c pb.ReaderServiceClient){
 	
 	res, err := c.MigrateConfig(context.Background(), &pb.ConfigRequest{
 		Namespace: "wordpress",
-		Resources: "secrets,deployments,svc",
-		Storageclassname: "default-storageclass", // default-storageclass nutanix-volume
+		Resources: "svc,deployments,secrets",
 		Labels: "app=wordpress",
 		ServerAddr: "10.15.170.49:50051",
 	})
 
 	if err != nil {
-		log.Fatalf("could not MigrateVolume: %v\n", err)
+		log.Fatalf("could not MigrateConfig: %v\n", err)
 	}
 
 	log.Printf("Message recieved from readers server: %v\n", res.Message)

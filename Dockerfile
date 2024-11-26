@@ -7,6 +7,10 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
     chmod +x kubectl && \
     mv kubectl /usr/local/bin/
 
+RUN curl -L "https://github.com/mikefarah/yq/releases/download/v4.44.5/yq_linux_amd64" -o yq && \
+    chmod +x yq && \
+    mv yq /usr/local/bin/
+
 # Set the working directory inside the container
 WORKDIR /app
 

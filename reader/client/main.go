@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"context"
 	"log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -9,9 +10,10 @@ import (
 	   
 )
 
-var addr string = "10.15.170.150:30051"
-// 10.15.170.150 nke
-// 10.46.63.221 ocp
+var addr string = "10.15.168.215:30051"
+// 10.15.170.150:30051 nke
+// 10.46.63.221:30051 ocp
+// 10.15.168.215:30051 new ocp 
 
 func main() {
 
@@ -27,4 +29,6 @@ func main() {
 
 	//doMigrateVolume(c)
 	doMigrateConfig(c)
+	//doMigrateApp(c)
+
 }

@@ -30,7 +30,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
     // }
 
 	// name to keep target pvc
-	volumeName := in.VolumeName
+	//volumeName := in.VolumeName
 	// volumeName := os.Getenv("VOLUME_NAME")
 	// if volumeName == "" {
 	// 	volumeName = "wp-pv-claim3"
@@ -44,11 +44,11 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	// 	backupVolume = "wp-pv-claim"
 	// 	//log.Fatalf("BACKUP_VOLUME environment variable is not set") 
 	// }
-
+	volumeName := backupVolume
 	//config, err := clientcmd.BuildConfigFromFlags("",*kubeconfig)
 	namespace := in.Namespace
-	snapClass := in.Snapclass
-	storageClassName:= in.Storageclassname
+	//snapClass := in.Snapclass
+	//storageClassName:= in.Storageclassname
 	//fmt.Printf("error building config from flags: %s\n",err.Error())
 	config, err := rest.InClusterConfig()
 	if err!= nil {
@@ -82,7 +82,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	snap:= v2.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Name: "source-snap"},
-		Spec: v2.VolumeSnapshotSpec{Source: v2.VolumeSnapshotSource{PersistentVolumeClaimName: &backupVolume}, VolumeSnapshotClassName: &snapClass},
+		Spec: v2.VolumeSnapshotSpec{Source: v2.VolumeSnapshotSource{PersistentVolumeClaimName: &backupVolume}},
 		Status: &v2.VolumeSnapshotStatus{},
 	}
 
@@ -128,7 +128,7 @@ for {
 	apiGroup := "snapshot.storage.k8s.io"
 	pvclaim := v1.PersistentVolumeClaim{TypeMeta: metav1.TypeMeta{Kind:"PersistentVolumeClaim",APIVersion:"v1"},
 										ObjectMeta: metav1.ObjectMeta{Name: "diskreader-pvc"},
-										Spec: v1.PersistentVolumeClaimSpec{StorageClassName: &storageClassName, 
+										Spec: v1.PersistentVolumeClaimSpec{ 
 											VolumeMode: &volumeMode, 
 											Resources: v1.VolumeResourceRequirements{Limits: v1.ResourceList{},Requests: m}, 
 											DataSource: &v1.TypedLocalObjectReference{APIGroup: &apiGroup  ,Kind: "VolumeSnapshot" , Name:"source-snap"},
@@ -201,7 +201,15 @@ for {
 				if err != nil{
 					fmt.Printf("error while deleting pvc from %v namespace: %v\n",namespace ,err)
 				}
-				fmt.Print("diskreader-pvc deleted\n")
+				for {
+					_ ,err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(),"diskreader-pvc",metav1.GetOptions{})
+					if err!=nil {
+						fmt.Printf("diskreader-pvc deleted\n")
+						break
+					}
+					fmt.Println("waiting for pvc deletion")
+					time.Sleep(5 * time.Second)
+				}
 				flag=1
 				break;
 			} 

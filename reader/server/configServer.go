@@ -34,7 +34,7 @@ func(s *Server)MigrateConfig(ctx context.Context,in *pb.ConfigRequest) (*pb.Conf
 
 	tFile, err := os.CreateTemp("","configs-*.json")
 	if err!=nil{
-		log.Printf("error creating temp file: %v\n",err)
+		log.Printf("error creating file: %v\n",err)
 	}
 	defer os.Remove(tFile.Name())
 	
@@ -47,7 +47,13 @@ func(s *Server)MigrateConfig(ctx context.Context,in *pb.ConfigRequest) (*pb.Conf
 	output, err := cmd.CombinedOutput()
 	if err != nil{
 		log.Printf("kubectl get failed with error %v\n %s",err,string(output))
-	} else {log.Printf("kubectl got %s",string(output))}
+	} else {log.Printf("kubectl command completed successfully")}
+
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("yq 'del(.items[].metadata.resourceVersion, .items[].metadata.uid, .items[].metadata.creationTimestamp, .items[].status, .items[].spec.clusterIP, .items[].spec.clusterIPs)' -i %s", tFile.Name()))
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("yq eval failed with error: %v\n%s", err, string(output))
+	} else {log.Printf("yq cleaning command completed successfully.") }
 
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 

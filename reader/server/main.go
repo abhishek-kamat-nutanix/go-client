@@ -1,9 +1,11 @@
 package main
 
 import (
-	"google.golang.org/grpc"
 	"log"
 	"net"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	pb "github.com/abhishek-kamat-nutanix/go-client/reader/proto"
 )
@@ -24,6 +26,8 @@ func main() {
 	log.Printf("Listening on %s\n", addr)
 
 	s:= grpc.NewServer()
+
+	reflection.Register(s)
 
 	pb.RegisterReaderServiceServer(s, &Server{})
 
