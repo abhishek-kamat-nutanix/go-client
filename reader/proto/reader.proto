@@ -6,11 +6,8 @@ option go_package = "github.com/abhishek-kamat-nutanix/go-client/reader/proto";
 
 message VolumeRequest {
     string serverAddr = 1;
-    string volumeName = 2;
-    string BackupName = 3;
-    string namespace = 4;
-    string snapclass = 5;
-    string storageclassname = 6;
+    string BackupName = 2;
+    string namespace = 3;
 }
 
 message VolumeResponse {
@@ -20,9 +17,8 @@ message VolumeResponse {
 message ConfigRequest {
     string namespace = 1;
     string resources = 2; 
-    string storageclassname = 3;
-    string Labels = 4;
-    string serverAddr = 5;
+    string Labels = 3;
+    string serverAddr = 4;
 }
 
 message ConfigResponse {
