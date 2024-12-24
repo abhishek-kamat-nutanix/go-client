@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: go-client
-        image: abhishekkamat27/reader-server:ns_class
+        image: abhishekkamat27/readyamls:v16
         command: ["./server"]
         ports:
         - containerPort: 50051

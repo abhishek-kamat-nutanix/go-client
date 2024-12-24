@@ -7,25 +7,9 @@ import (
 	"os"
 	"os/exec"
 
-	//"time"
-
 	pb "github.com/abhishek-kamat-nutanix/go-client/reader/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	//"k8s.io/apimachinery/pkg/api/resource"
-
-	//types "k8s.io/apimachinery/pkg/types"
-
-	//v2 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
-	//"github.com/kubernetes-csi/external-snapshotter/client/v8/clientset/versioned"
-	//batchv1 "k8s.io/api/batch/v1"
-	//v1 "k8s.io/api/core/v1"
-	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/client-go/kubernetes"
-	//"k8s.io/client-go/rest"
-
-	//"k8s.io/client-go/tools/clientcmd"
 	pr "github.com/abhishek-kamat-nutanix/read-write-grpc/backup/proto"
 )
 
@@ -41,8 +25,7 @@ func(s *Server)MigrateConfig(ctx context.Context,in *pb.ConfigRequest) (*pb.Conf
 	ns := in.Namespace
 	rs := in.Resources
 	labl := in.Labels
-	//storageClassName:= in.Storageclassname
-	//str := "kubectl get " + rs + " -n " + ns + " -l " + labl + " -o yaml > /yaml/manifests.yaml"
+
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("kubectl get %s -n %s -l %s -o json > %s", rs, ns, labl, tFile.Name()))
 	output, err := cmd.CombinedOutput()
 	if err != nil{

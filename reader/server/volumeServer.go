@@ -14,49 +14,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	//"k8s.io/client-go/tools/clientcmd"
 )
 
 func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.VolumeResponse, error) {
-
-	//kubeconfig := flag.String("kubeconfig","/home/nutanix/nke-source.cfg", "location to your kubeconfig file")
+	
+	fmt.Printf("MigrateVolume was invoked\n")
 	
 	// writer servers IP address
 	address := in.ServerAddr
-	// address := os.Getenv("GRPC_SERVER_ADDR")
-    // if address == "" {
-	// 	address = "10.15.170.49:50051"
-    //     //log.Fatalf("GRPC_SERVER_ADDR environment variable is not set")
-    // }
-
-	// name to keep target pvc
-	//volumeName := in.VolumeName
-	// volumeName := os.Getenv("VOLUME_NAME")
-	// if volumeName == "" {
-	// 	volumeName = "wp-pv-claim3"
-	// 	//log.Fatalf("VOLUME_NAME environment variable is not set") 
-	// }
 
 	// source volume to migrate
 	backupVolume := in.BackupName
-	// backupVolume := os.Getenv("BACKUP_VOLUME")
-	// if backupVolume == "" {
-	// 	backupVolume = "wp-pv-claim"
-	// 	//log.Fatalf("BACKUP_VOLUME environment variable is not set") 
-	// }
+
+	// target volume name
 	volumeName := backupVolume
-	//config, err := clientcmd.BuildConfigFromFlags("",*kubeconfig)
+	
+	// namespace of source volume
 	namespace := in.Namespace
-	//snapClass := in.Snapclass
-	//storageClassName:= in.Storageclassname
-	//fmt.Printf("error building config from flags: %s\n",err.Error())
+
+	// get in-cluster config
 	config, err := rest.InClusterConfig()
 	if err!= nil {
 		fmt.Printf("error getting in-cluster config: %v", err)
 	}
 	
-
-	
+	// create clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil{
 		fmt.Printf("error creating clientset: %v\n", err)
@@ -67,18 +49,16 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	if err != nil{		fmt.Printf("error while getting pvc %v from %v namespace: %v\n", backupVolume,namespace,err)
 	}
 
+	// get size of source pvc
 	size := pvc.Status.Capacity.Storage()
 
-	//fmt.Printf("size of pvc is %v \n",size)
-
+	// create clientset for snapshot
 	clientset2, err := versioned.NewForConfig(config)
 	if err !=nil {
 		fmt.Printf("error creating clientset: %v\n", err)
 	}
 
-
 	// take a snapshot of source pvc
-	// snapClass := "default-snapshotclass"
 	snap:= v2.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Name: "source-snap"},
@@ -90,7 +70,7 @@ func (s *Server)MigrateVolume(ctx context.Context,in *pb.VolumeRequest) (*pb.Vol
 	if err != nil{
 		fmt.Printf("error while creating snapshot in %v namespace: %v\n",namespace ,err)
 	}
-	fmt.Printf("ss created %s \n",ss.UID)
+	fmt.Printf("ss created of PVC: %v\n", *ss.Spec.Source.PersistentVolumeClaimName)
 
 
 	// Wait until snapshot is ready to use
@@ -111,15 +91,14 @@ for {
 	PatchType := types.MergePatchType
 	data := []byte(`{"metadata": {"annotations": {"snapshot.storage.kubernetes.io/allow-volume-mode-change": "true"}}}`)
 
-	snapcontent, err := clientset2.SnapshotV1().VolumeSnapshotContents().Patch(context.Background(), *ss.Status.BoundVolumeSnapshotContentName, PatchType, data, metav1.PatchOptions{})
+	_, err = clientset2.SnapshotV1().VolumeSnapshotContents().Patch(context.Background(), *ss.Status.BoundVolumeSnapshotContentName, PatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		fmt.Printf("Error while patching VolumeSnapshotContent: %v\n", err)
 	}
-	fmt.Printf("VolumeSnapshotContent patched successfully: %s\n", snapcontent.UID)
+	fmt.Printf("VolumeSnapshotContent patched successfully\n")
 
 
-	// create pvc for diskreader
-	// storageClassName:=  "default-storageclass"	
+	// create pvc for diskreader	
 	volumeMode := v1.PersistentVolumeBlock 
 	persistentVolumeAccessMode := v1.ReadWriteOnce
 	resourceName:= v1.ResourceStorage
@@ -140,7 +119,7 @@ for {
 	if err != nil{
 		fmt.Printf("error while creating diskreader pvc in %v namespace: %v\n",namespace,err)
 	}
-	fmt.Printf("pvc created %s\n",create_pvc.UID)
+	fmt.Printf("pvc created %s\n",create_pvc.Name)
 	
 
 	var completions int32 = 1
@@ -150,7 +129,7 @@ for {
 	priv := true
 	// diskereader job comes here
 	readerjob:= batchv1.Job{TypeMeta: metav1.TypeMeta{Kind: "Job",APIVersion: "batch"},
-							ObjectMeta: metav1.ObjectMeta{Name: "reader-job"},
+							ObjectMeta: metav1.ObjectMeta{Name: "disk-reader-job"},
 							Spec: batchv1.JobSpec{Completions: &completions,
 								Template: v1.PodTemplateSpec{ObjectMeta:  metav1.ObjectMeta{Labels: labels}, 
 								Spec: v1.PodSpec{RestartPolicy: "OnFailure",ImagePullSecrets: []v1.LocalObjectReference{{Name: "my-registry-secret"}}, 
@@ -160,7 +139,7 @@ for {
 	if err != nil{
 		fmt.Printf("error while creating reader job in %v namespace: %v\n",namespace,err)
 	}
-	fmt.Printf("disk reader job created %v\n",reader.UID)
+	fmt.Printf("job created: %v\n",reader.Name)
 
 	// delete snapshot once used
 	for create_pvc.Status.Phase!= v1.ClaimBound {
@@ -178,7 +157,7 @@ for {
 
 
 	// clearance of objects once disk reader Job is done
-	job, err := clientset.BatchV1().Jobs(namespace).Get(context.Background(),"reader-job",metav1.GetOptions{})
+	job, err := clientset.BatchV1().Jobs(namespace).Get(context.Background(),"disk-reader-job",metav1.GetOptions{})
 	if err != nil{
 		fmt.Printf("error while getting job in %v namespace: %v\n",namespace,err)
 	}
@@ -190,7 +169,7 @@ for {
 		for _, condition := range job.Status.Conditions {
 			if condition.Type == batchv1.JobComplete && condition.Status == v1.ConditionTrue {
 				//delete diskreader job so diskreader pvc is not bound and can be deleted successfully
-				err = clientset.BatchV1().Jobs(namespace).Delete(context.Background(),"reader-job",metav1.DeleteOptions{PropagationPolicy: &deletePolicy})	
+				err = clientset.BatchV1().Jobs(namespace).Delete(context.Background(),"disk-reader-job",metav1.DeleteOptions{PropagationPolicy: &deletePolicy})	
 				if err != nil{
 					fmt.Printf("error while deleting job in %v namespace: %v\n",namespace,err)
 				}
@@ -204,21 +183,21 @@ for {
 				for {
 					_ ,err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(),"diskreader-pvc",metav1.GetOptions{})
 					if err!=nil {
-						fmt.Printf("diskreader-pvc deleted\n")
+						fmt.Printf("diskreader-pvc deleted\n\n")
 						break
 					}
 					fmt.Println("waiting for pvc deletion")
 					time.Sleep(5 * time.Second)
 				}
-				flag=1
+				flag = 1
 				break;
 			} 
 		}
-		if flag==1 {
+		if flag == 1 {
 			break
 		}
-		job, err = clientset.BatchV1().Jobs(namespace).Get(context.Background(),"reader-job",metav1.GetOptions{})	
-				if err != nil{
+		job, err = clientset.BatchV1().Jobs(namespace).Get(context.Background(),"disk-reader-job",metav1.GetOptions{})	
+				if err != nil {
 					fmt.Printf("error while getting pvc in %v namespace: %v\n",namespace,err)
 				}
 		

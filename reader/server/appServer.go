@@ -23,14 +23,8 @@ import (
 )
 
 func (s *Server) MigrateApp(ctx context.Context, in *pb.AppRequest) (*pb.AppResponse, error) {
-    // kubeconfig := flag.String("kubeconfig", "/home/nutanix/nke-source.cfg", "location to your kubeconfig file")
-    // flag.Parse() // Ensure flags are parsed before use
-
-    // Build the Kubernetes config
-    // config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-    // if err != nil {
-    //     return nil, fmt.Errorf("error getting kubeconfig: %v", err)
-    // }
+    
+    fmt.Printf("MigrateApp was invoked\n")
     config, err := rest.InClusterConfig()
 	if err!= nil {
 		fmt.Printf("error getting in-cluster config: %v", err)
@@ -53,7 +47,7 @@ func (s *Server) MigrateApp(ctx context.Context, in *pb.AppRequest) (*pb.AppResp
         return nil, fmt.Errorf("error listing PVCs in namespace %s: %v", namespace, err)
     }
 
-    // Debug information
+    // migrate each volume in list
     for _,item := range pvc.Items {
     fmt.Printf("PVCs in namespace %s: %v\n", namespace, item.Name)
 

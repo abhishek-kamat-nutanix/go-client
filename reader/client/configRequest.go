@@ -12,7 +12,7 @@ func doMigrateConfig(c pb.ReaderServiceClient){
 	
 	res, err := c.MigrateConfig(context.Background(), &pb.ConfigRequest{
 		Namespace: "wordpress",
-		Resources: "svc,deployments,secrets",
+		Resources: "deployments",
 		Labels: "app=wordpress",
 		ServerAddr: "10.15.170.49:50051",
 	})
