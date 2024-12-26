@@ -8,7 +8,7 @@ This tool facilitates the migration of applications from one Kubernetes cluster 
 ## Prerequisites  
 
 ### Source Cluster  
-- Ensure a valid **VolumeSnapshotClass** exists.
+- Ensure a valid **VolumeSnapshotClass** exists. A sample is given which uses Nutanix CSI Driver [VSC](https://github.com/abhishek-kamat-nutanix/go-client/blob/master/k8s/vsc.yaml)
 
 ### Target Cluster  
 - A default **VolumeSnapshotClass** must be available.  
@@ -38,7 +38,7 @@ kubectl apply -f <path-to-clusterrolebinding.yaml>
 
 ## Deploy the Writer Server
 
-To deploy the Writer Server, apply the `writer-deployment.yaml` file to the **target Kubernetes cluster**:
+To deploy the Writer Server, apply the `writer-deployment.yaml` file on the **target Kubernetes cluster**: [writer-deployment.yaml](https://github.com/abhishek-kamat-nutanix/read-write-grpc/blob/master/writer-deployment.yaml)
 
 ```bash
 kubectl apply -f https://github.com/abhishek-kamat-nutanix/read-write-grpc/blob/master/writer-deployment.yaml
@@ -59,7 +59,7 @@ kubectl apply -f https://github.com/abhishek-kamat-nutanix/read-write-grpc/blob/
 2. On the **target cluster**, get the IP of the `writer-server` service:
 
    ```bash
-   kubectl get service writer-server-service -n <namespace>
+   kubectl get service grpc-server-service -n <namespace>
    ```
 
 ### Provide IPs to the Orchestrator
@@ -69,13 +69,11 @@ Use the IPs obtained above in the GRPC request sent to the orchestrator.
 #### Example GRPC Command:
 
 ```bash
-grpcurl -d '{"reader_ip": "source-cluster-ip:50051", "writer_ip": "target-cluster-ip:50051"}' -plaintext orchestrator-service-ip:port
+grpcurl -d '{
+  "namespace": "wordpress",
+  "resources": "deployments,secrets,svc",
+  "labels": "app=wordpress",
+  "serverAddr": "10.15.170.48:50051",
+  "readerAddr": "10.15.168.215:30051"
+}' -plaintext localhost:50051 move.MoveService/MigrateApp
 ```
-
----
-
-## References
-
-- [Kubernetes Documentation](https://kubernetes.io/docs/concepts)
-- [Nutanix Data Services for Kubernetes](https://portal.nutanix.com/page/documents/details?targetId=Nutanix-Data-Services-for-Kubernetes-v1_2)
-- [Learn Kubernetes - Udemy Course](https://nutanix.udemy.com/course/learn-kubernetes)
