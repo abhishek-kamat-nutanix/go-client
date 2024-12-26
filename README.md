@@ -26,12 +26,13 @@ Apply the following RBAC configurations on the **target cluster**:
 - [Role Binding](https://github.com/abhishek-kamat-nutanix/go-client/blob/master/k8s/rolebinding.yaml)  
 
 Deploy each using the following commands:
+
 ```bash
 kubectl apply -f <path-to-role.yaml>
 kubectl apply -f <path-to-rolebinding.yaml>
 kubectl apply -f <path-to-clusterrole.yaml>
 kubectl apply -f <path-to-clusterrolebinding.yaml>
-
+```
 
 # Writer Server Deployment and Usage
 
